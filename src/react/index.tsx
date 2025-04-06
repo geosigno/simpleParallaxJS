@@ -3,6 +3,7 @@ import AnimationManager from "./AnimationManager";
 import useGetImageHeight from "./hooks/useGetImageHeight";
 import useGetTransitionValue from "./hooks/useGetTransitionValue";
 import useIntersectionObserver from "./hooks/useIntersectionObserver";
+import useReducedMotion from "./hooks/useReduceMotion";
 import { SimpleParallaxProps } from "./types";
 
 const SimpleParallax: React.FunctionComponent<SimpleParallaxProps> = ({
@@ -26,7 +27,8 @@ const SimpleParallax: React.FunctionComponent<SimpleParallaxProps> = ({
   const [transformCSS, setTransformCSS] = useState("");
   const [transitionCSS, setTransitionCSS] = useState("");
   const [shouldApplyTransition, setShouldApplyTransition] = useState(false);
-
+  
+  const prefersReducedMotion = useReducedMotion();
   const [imageRef, imageHeight, isLoaded] = useGetImageHeight(src);
   const [elementRef, isVisible] = useIntersectionObserver<HTMLDivElement>({
     root: null,
@@ -43,7 +45,7 @@ const SimpleParallax: React.FunctionComponent<SimpleParallaxProps> = ({
   });
 
   const updateParallax = useCallback(() => {
-    if (!isVisible && isInit) return;
+    if ((!isVisible && isInit) || prefersReducedMotion) return;
 
     if (window.scrollY !== viewportTop || !isInit) {
       const boundingClientRect = imageRef.current?.getBoundingClientRect();
@@ -52,43 +54,53 @@ const SimpleParallax: React.FunctionComponent<SimpleParallaxProps> = ({
       }
       if (!isInit) {
         setIsInit(true);
+        // We'll enable transitions after the first calculation
         setTimeout(() => {
           setShouldApplyTransition(true);
         }, 50);
       }
       setViewportTop(window.scrollY);
     }
-  }, [viewportTop, isVisible, imageRef, isInit]);
+  }, [viewportTop, isVisible, imageRef, isInit, prefersReducedMotion]);
 
   useEffect(() => {
+    if (prefersReducedMotion) {
+      setTransformCSS("");
+      return;
+    }
+
     let transform = `translate3d(${transitionValue})`;
     if (!overflow) {
       transform += ` scale(${scale})`;
     }
     setTransformCSS(transform);
-  }, [transitionValue, scale, overflow]);
+  }, [transitionValue, scale, overflow, prefersReducedMotion]);
 
   useEffect(() => {
-    if (!transition || !delay || !shouldApplyTransition) {
+    if (!transition || !delay || !shouldApplyTransition || prefersReducedMotion) {
       setTransitionCSS("");
       return;
     }
     setTransitionCSS(`transform ${delay}s ${transition}`);
-  }, [transition, delay, shouldApplyTransition]);
+  }, [transition, delay, shouldApplyTransition, prefersReducedMotion]);
 
   useEffect(() => {
-    AnimationManager.register(updateParallax);
+    // Only register for animation if reduced motion is not preferred
+    if (!prefersReducedMotion) {
+      AnimationManager.register(updateParallax);
+    }
+    
     return () => {
       AnimationManager.unregister(updateParallax);
     };
-  }, [updateParallax]);
+  }, [updateParallax, prefersReducedMotion]);
 
   const clonedChild = React.isValidElement(children)
     ? React.cloneElement(children as React.ReactElement, {
         style: {
           ...((children as React.ReactElement).props.style ?? {}),
           transform: transformCSS,
-          willChange: "transform",
+          willChange: prefersReducedMotion ? "auto" : "transform",
           transition: transitionCSS,
         },
         ref: imageRef,
