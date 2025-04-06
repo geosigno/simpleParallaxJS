@@ -25,6 +25,7 @@ const SimpleParallax: React.FunctionComponent<SimpleParallaxProps> = ({
   );
   const [transformCSS, setTransformCSS] = useState("");
   const [transitionCSS, setTransitionCSS] = useState("");
+  const [shouldApplyTransition, setShouldApplyTransition] = useState(false);
 
   const [imageRef, imageHeight, isLoaded] = useGetImageHeight(src);
   const [elementRef, isVisible] = useIntersectionObserver<HTMLDivElement>({
@@ -51,10 +52,13 @@ const SimpleParallax: React.FunctionComponent<SimpleParallaxProps> = ({
       }
       if (!isInit) {
         setIsInit(true);
+        setTimeout(() => {
+          setShouldApplyTransition(true);
+        }, 50);
       }
       setViewportTop(window.scrollY);
     }
-  }, [viewportTop, isVisible, imageRef]);
+  }, [viewportTop, isVisible, imageRef, isInit]);
 
   useEffect(() => {
     let transform = `translate3d(${transitionValue})`;
@@ -62,12 +66,15 @@ const SimpleParallax: React.FunctionComponent<SimpleParallaxProps> = ({
       transform += ` scale(${scale})`;
     }
     setTransformCSS(transform);
-  }, [transitionValue, scale]);
+  }, [transitionValue, scale, overflow]);
 
   useEffect(() => {
-    if (!transition || !delay) return;
+    if (!transition || !delay || !shouldApplyTransition) {
+      setTransitionCSS("");
+      return;
+    }
     setTransitionCSS(`transform ${delay}s ${transition}`);
-  }, [transition, delay]);
+  }, [transition, delay, shouldApplyTransition]);
 
   useEffect(() => {
     AnimationManager.register(updateParallax);
