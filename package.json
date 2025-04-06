@@ -1,6 +1,6 @@
 {
   "name": "simple-parallax-js",
-  "version": "6.0.1",
+  "version": "6.1.0",
   "description": "simpleParallax.js is a lightweight and easy-to-use JS library that adds parallax animations to any image.",
   "homepage": "https://simpleparallax.com/",
   "main": "dist/react/simpleParallax.umd.js",
