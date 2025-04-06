@@ -15,6 +15,17 @@ export default class SimpleParallax {
 
         // check if the browser support simpleParallax
         if (!isSupportedBrowser()) return;
+        
+        // Check if user prefers reduced motion
+        this.prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        
+        // Set up listener for changes to reduced motion preference
+        this.reducedMotionMediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+        this.handleReducedMotionChange = this.handleReducedMotionChange.bind(this);
+        this.reducedMotionMediaQuery.addEventListener('change', this.handleReducedMotionChange);
+
+        // If reduced motion is preferred, don't initialize parallax effects
+        if (this.prefersReducedMotion) return;
 
         this.elements = convertToArray(elements);
         this.defaults = {
@@ -45,19 +56,32 @@ export default class SimpleParallax {
 
         this.init();
     }
+    
+    // Handle changes to reduced motion preference
+    handleReducedMotionChange(event) {
+        this.prefersReducedMotion = event.matches;
+        
+        if (this.prefersReducedMotion) {
+            // If user now prefers reduced motion, remove all parallax effects
+            this.destroy();
+        } else {
+            // If user no longer prefers reduced motion, reinitialize
+            this.init();
+        }
+    }
 
     init() {
+        // Don't initialize if reduced motion is preferred
+        if (this.prefersReducedMotion) return;
+        
         viewport.setViewportAll(this.customContainer);
 
         instances = [
             ...this.elements.map(
-                (element) => new ParallaxInstance(element, this.settings)
+                (element) => new ParallaxInstance(element, this.settings, this.prefersReducedMotion)
             ),
             ...instances
         ];
-
-        // update the instance length
-        // instancesLength = instances.length;
 
         // only if this is the first simpleParallax init
         if (!isInit) {
@@ -109,7 +133,7 @@ export default class SimpleParallax {
     }
 
     // proceed the element
-    proceedElement(instance) {
+    proceedElement(instance) {   
         let isVisible = false;
 
         // if this is a custom container
@@ -150,11 +174,16 @@ export default class SimpleParallax {
     }
 
     destroy() {
+        // Remove reduced motion event listener
+        if (this.reducedMotionMediaQuery) {
+            this.reducedMotionMediaQuery.removeEventListener('change', this.handleReducedMotionChange);
+        }
+        
         const instancesToDestroy = [];
 
         // remove all instances that need to be destroyed from the instances array
         instances = instances.filter((instance) => {
-            if (this.elements.includes(instance.element)) {
+            if (this.elements && this.elements.includes(instance.element)) {
                 // push instance that need to be destroyed into instancesToDestroy
                 instancesToDestroy.push(instance);
                 return false;
@@ -166,7 +195,7 @@ export default class SimpleParallax {
             // unset style
             instance.unSetStyle();
 
-            if (this.settings.overflow === false) {
+            if (this.settings && this.settings.overflow === false) {
                 // if overflow option is set to false
                 // unwrap the element from .simpleParallax wrapper container
                 instance.unWrapElement();

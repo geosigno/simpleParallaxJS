@@ -3,7 +3,7 @@ import isImageLoaded from '../helpers/isImageLoaded';
 import { viewport } from '../helpers/viewport';
 
 class ParallaxInstance {
-    constructor(element, options) {
+    constructor(element, options, prefersReducedMotion = false) {
         // set the element & settings
         this.element = element;
         this.elementContainer = element;
@@ -11,6 +11,7 @@ class ParallaxInstance {
         this.isVisible = true;
         this.isInit = false;
         this.oldTranslateValue = -1;
+        this.prefersReducedMotion = prefersReducedMotion;
 
         this.init = this.init.bind(this);
 
@@ -19,6 +20,9 @@ class ParallaxInstance {
             this.element.closest(this.settings.customWrapper)
                 ? this.element.closest(this.settings.customWrapper)
                 : null;
+
+        // Don't initialize if reduced motion is preferred
+        if (this.prefersReducedMotion) return;
 
         // check if images has not been loaded yet
         if (isImageLoaded(element)) {
@@ -34,6 +38,9 @@ class ParallaxInstance {
     }
 
     init(asyncInit) {
+        // Don't initialize if reduced motion is preferred
+        if (this.prefersReducedMotion) return;
+        
         // for some reason, <picture> are init an infinite time on windows OS
         if (this.isInit) return;
 
@@ -136,7 +143,7 @@ class ParallaxInstance {
         this.element.style.willChange = 'transform';
     }
 
-    // apply the transition effet
+    // apply the transition effect
     setTransitionCSS() {
         // add transition option
         this.element.style.transition = `transform ${this.settings.delay}s ${this.settings.transition}`;
@@ -195,7 +202,7 @@ class ParallaxInstance {
 
     // Intersection Observer Callback to set the element at visible state or not
     intersectionObserverCallback(entries) {
-        entries.forEach((entry) => {
+       entries.forEach((entry) => {
             if (entry.isIntersecting) {
                 this.isVisible = true;
             } else {
@@ -207,7 +214,7 @@ class ParallaxInstance {
     // check if the current element is visible in the Viewport
     // for browser that not support Intersection Observer API
     checkIfVisible() {
-        return (
+       return (
             this.elementBottom > viewport.positions.top &&
             this.elementTop < viewport.positions.bottom
         );
